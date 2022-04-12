@@ -480,3 +480,13 @@ Refer below sample
   updatedAt: "2021-09-17T04:25:07.803Z",
 }
 ```
+
+
+1. https://www.youtube.com/watch?v=2M0H8M3jIAk&list=PLwGdqUZWnOp0VVqPVPA3ccqtjpLLPwtN8&index=5
+2. https://www.youtube.com/watch?v=YgHP_h8EyT4&list=PLwGdqUZWnOp3ZMoF7DhwyHt-NPBZxnL4h&index=12
+3. https://www.thapatechnical.com/2020/07/responsive-e-commerce-shopping-cart.html
+4. https://www.thapatechnical.com/2019/11/how-to-get-source-code.html
+5. https://www.udemy.com/course/ultimate-javascript-leetcode-interview-bootcamp/learn/lecture/15028878#questions
+6. https://getbootstrap.com/docs/5.1/getting-started/introduction/
+7. https://getbootstrap.com/docs/4.0/components/forms/
+8. https://www.youtube.com/watch?v=l6i8RDrhcqM
