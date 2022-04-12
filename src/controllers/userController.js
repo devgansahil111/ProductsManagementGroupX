@@ -1,0 +1,335 @@
+// ------------------------------------------------------------------------------------------ //
+// Require Packages
+
+
+const UserModel = require("../models/userModel");
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const userModel = require("../models/userModel");
+const ObjectId = mongoose.Schema.Types.ObjectId;
+const aws = require("aws-sdk");
+const jwt = require("jsonwebtoken");
+
+
+// ------------------------------------------------------------------------------------------- //
+// Validation Format
+
+const isValid = function (value) {
+    if (typeof value === "undefined" || value === "null") return false
+    if (typeof value === "string" && value.trim().length === 0) return false
+    return true;
+}
+
+const isValidObjectId = function (ObjectId) {
+    return mongoose.Types.ObjectId.isValid(ObjectId)
+}
+
+
+// -------------------------------------------------------------------------------------------- //
+// AWS
+
+
+aws.config.update({
+    accessKeyId: "AKIAY3L35MCRVFM24Q7U",
+    secretAccessKey: "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",
+    region: "ap-south-1"
+});
+
+let uploadFile = async(file) => {
+    return new Promise(async function(resolve, reject) {
+            //this function will upload file to aws and return the link
+            let s3 = new aws.S3({ apiVersion: "2006-03-01" }) //we will be using s3 service of aws
+                // await uploadFile(file)
+            var uploadParams = {
+                ACL: "public-read",
+                Bucket: "classroom-training-bucket", // HERE
+                Key: "sahil/" + file.originalname, // HERE "radhika/smiley.jpg"
+                Body: file.buffer
+            }
+
+            s3.upload(uploadParams, function(err, data) {
+                if (err) {
+                    return reject({ "error": err })
+                }
+
+                console.log(data)
+                console.log(" file uploaded succesfully ")
+                return resolve(data.Location) // HERE
+            })
+
+            // let data= await s3.upload(uploadParams)
+            // if (data) return data.Location
+            // else return "there is an error"
+
+        }
+
+    )
+};
+
+// ------------------------------------------------------------------------------------ //
+
+const writeFile = async function(req, res) {
+    try {
+        let files = req.files
+        if (files && files.length > 0) {
+            //upload to s3 and get the uploaded link
+            // res.send the link back to frontend/postman
+            let uploadedFileURL = await uploadFile(files[0])
+            res.status(201).send({ status: true, msg: "file uploaded succesfully", data: uploadedFileURL })
+            return
+
+        } else {
+            res.status(400).send({ msg: "No file found" })
+            return
+        }
+    } catch (err) {
+        console.log(error);
+        res.status(500).send({ msg: error.message });
+    }
+};
+
+
+// -------------------------------------------------------------------------------------------- //
+// Create
+
+const createUser = async function(req, res){
+    try {
+        let data = req.body;
+        let { fName, lName, email, password, phone, profileImage, address } = data // Destructuring
+        
+        if (Object.keys(data).length == 0) {
+            res.status(400).send({ status: false, msg: "BAD REQUEST" })
+            return
+        }
+        if (!isValid(fName)){
+            res.status(400).send({ status: false, msg: "First name is mandatory" })
+            return
+        }
+        if (!isValid(lName)){
+            res.status(400).send({ status: false, msg: "Last name is mandatory" })
+            return
+        }
+        if (!isValid(email)){
+            res.status(400).send({ status: false, msg: "Email is mandatory" })
+            return
+        }
+        if (!(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email))) {
+            res.status(400).send({ status: false, msg: "Email should be valid email address" })
+            return
+        }
+        
+        let isEmailAlreadyUsed = await userModel.findOne({ email })
+        if (isEmailAlreadyUsed) {
+            res.status(400).send({ status: false, msg: "Email Already Exist" })
+            return
+        }
+        if (!isValid(password)){
+            res.status(400).send({ status: false, msg: "Password is mandatory" })
+            return
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        data.password = await bcrypt.hash(data.password, salt);
+        // data.password = await bcrypt.compare(data.password, hash);
+
+        if (!isValid(password > 8 || password < 15)){
+            res.status(400).send({ status: false, msg: "Password range should be between 8 to 15" })
+            return
+        }
+        if (!isValid(phone)){
+            res.status(400).send({ status: false, msg: "Phone Number is mandatory" })
+            return
+        }
+        if (!(/^\d{10}$/.test(phone))) {
+            res.status(400).send({ status: false, msg: "Invalid Phone Number, it should be of 10 digits" })
+            return
+        }
+
+        let isPhoneAlreadyUsed = await userModel.findOne({ phone })
+        if (isPhoneAlreadyUsed) {
+            res.status(400).send({ status: false, msg: "Phone Number Already Exist" })
+            return
+        }
+        if (!isValid(profileImage)){
+            res.status(400).send({ status: false, msg: "Profile Image is mandatory" })
+            return
+        }
+        if (!(/^(http[s]?:\/\/){0,1}(www\.){0,1}[a-zA-Z0-9\.\-]+\.[a-zA-Z]{2,5}[\.]{0,1}/.test(profileImage))){
+            res.status(400).send({ status: false, msg: "Invalid Image url"})
+            return
+        }
+        if (!isValid(address)){
+            res.status(400).send({ status: false, msg: "Address is mandatory" })
+            return
+        }
+        if (!isValid(address.shipping.street)){
+            res.status(400).send({ status: false, msg: "Shipping Street is mandatory" })
+            return
+        }
+        if (!isValid(address.shipping.city)){
+            res.status(400).send({ status: false, msg: "Shippping City is mandatory" })
+            return
+        }
+        if (!isValid(address.shipping.pincode)){
+            res.status(400).send({ status: false, msg: "Shipping Pincode is mandatory" })
+            return
+        }
+        if (!isValid(address.billing.street)){
+            res.status(400).send({ status: false, msg: "Billing Street is mandatory" })
+            return
+        }
+        if (!isValid(address.billing.city)){
+            res.status(400).send({ status: false, msg: "Billing city is mandatory" })
+            return
+        }
+        if (!isValid(address.billing.pincode)){
+            res.status(400).send({ status: false, msg: "Billing Pincode is mandatory" })
+            return
+        }else {
+            let createdUser = await userModel.create(data);
+            res.status(201).send({ status: true, message: "User Created Successfully", msg: createdUser })
+            return
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({msg: error.message});
+    }
+};
+
+
+// ----------------------------------------------------------------------------------------------- //
+// Login User
+
+
+const loginUser = async function (req, res) {
+    try {
+        let data = req.body
+        let { email, password, userId } = data  // Destructure
+
+        if (!isValid(email)) {
+            res.status(400).send({ status: false, msg: "Email is required" })
+            return
+        }
+        if (!(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email))) {
+            res.status(400).send({ status: false, msg: "Email should have valid email address" })
+            return
+        }
+        if (!isValid(password)) {
+            res.status(400).send({ status: false, msg: "Password is required" })
+            return
+        }
+
+        // const salt = await bcrypt.genSalt(10);
+        // body.password = await bcrypt.hash(body.password, salt);
+
+        if (!isValid(userId)) {
+            res.status(400).send({ status: false, msg: "UserId is required" })
+            return
+        }
+        if (!isValidObjectId(userId)) {
+            res.status(400).send({ status: false, msg: "Invalid UserId" })
+            return
+        }
+
+        let userDetails = await userModel.findOne({ email: email, password: password })
+        if (!isValid(userDetails)) {
+            res.status(404).send({ status: false, msg: "Email & Password not matched" })
+            return
+        }
+        else {
+            let token = jwt.sign({
+                userId: userDetails._id,
+                iat: Math.floor(Date.now() / 1000),
+                // exp: Math.floor(Date.now() / 1000) + 10*60*60 
+
+            }, "Project-05-Group36-ShoppingCart", { expiresIn: "10h" })
+            res.setHeader("x-api-key", token);
+            res.status(201).send({ status: true, message: "User login successful", data: { userId, token } })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).send({ msg: error.message })
+    }
+};
+
+
+// ----------------------------------------------------------------------------------------- //
+// Get API
+
+const getUserProfile = async function (req, res){
+    try {
+        let userId = req.params.userId;
+
+        if (!isValid(userId.trim().length == 0)){
+            res.status(400).send({ status: false, msg: "UserId is required"})
+            return
+        }
+        if (!isValidObjectId(userId)){
+            res.status(404).send({ status: false, msg: "Invalid UserId"})
+            return
+        }
+
+        let profileData = await userModel.findById({_id: userId})
+        if (!isValid(profileData)){
+            res.status(400).send({ status: false, msg: "There is no user with this userId"})
+            return
+        }else{
+            res.status(200).send({ status: true, msg: "Congratulations", data: profileData })
+            return
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ msg: error.message });
+    }
+};
+
+// ---------------------------------------------------------------------------------------------- //
+// Put API
+
+const updatedData = async function (req, res){
+    try {
+        let data = req.body;
+        let userId = req.params.userId;
+
+        if (!isValid(data.length == 0)){
+            res.status(400).send({ status: false, msg: "Input via body is required"})
+            return
+        }
+        if (!isValid(userId.length == 0)){
+            res.status(400).send({ status: false, msg: "UserId is required"})
+            return
+        }
+        if (!isValidObjectId(userId)){
+            res.status(404).send({ status: false, msg: "Invalid UserId"})
+            return
+        }
+
+        let userUpdatedData = await userModel.findById({ _id: userId })
+
+        if (!isValid(userUpdatedData)){
+            res.status(400).send({ status: false, msg: "No user data found with this userId"})
+            return
+
+        }else{
+            await userModel.findByIdAndUpdate({_id: userId}, data, { new: true })
+            let updateDetails = await userModel.find({_id: userId})
+            res.status(200).send({ status: true, msg: "Data updated Successfully", data: updateDetails })
+            return
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ msg: error.message });
+    }
+};
+
+
+// ----------------------------------------------------------------------------------------------- //
+// Exports
+
+
+module.exports.createUser = createUser;
+module.exports.writeFile = writeFile;
+module.exports.loginUser = loginUser;
+module.exports.getUserProfile = getUserProfile;
+module.exports.updatedData = updatedData;
