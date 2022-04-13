@@ -2,13 +2,13 @@
 // Require Packages
 
 
-const UserModel = require("../models/userModel");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const userModel = require("../models/userModel");
 const ObjectId = mongoose.Schema.Types.ObjectId;
 const aws = require("aws-sdk");
 const jwt = require("jsonwebtoken");
+const awsdk = require("../aws-sdk/aws");
 
 
 // ------------------------------------------------------------------------------------------- //
@@ -26,78 +26,30 @@ const isValidObjectId = function (ObjectId) {
 
 
 // -------------------------------------------------------------------------------------------- //
-// AWS
-
-
-aws.config.update({
-    accessKeyId: "AKIAY3L35MCRVFM24Q7U",
-    secretAccessKey: "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",
-    region: "ap-south-1"
-});
-
-let uploadFile = async(file) => {
-    return new Promise(async function(resolve, reject) {
-            //this function will upload file to aws and return the link
-            let s3 = new aws.S3({ apiVersion: "2006-03-01" }) //we will be using s3 service of aws
-                // await uploadFile(file)
-            var uploadParams = {
-                ACL: "public-read",
-                Bucket: "classroom-training-bucket", // HERE
-                Key: "sahil/" + file.originalname, // HERE "radhika/smiley.jpg"
-                Body: file.buffer
-            }
-
-            s3.upload(uploadParams, function(err, data) {
-                if (err) {
-                    return reject({ "error": err })
-                }
-
-                console.log(data)
-                console.log(" file uploaded succesfully ")
-                return resolve(data.Location) // HERE
-            })
-
-            // let data= await s3.upload(uploadParams)
-            // if (data) return data.Location
-            // else return "there is an error"
-
-        }
-
-    )
-};
-
-// ------------------------------------------------------------------------------------ //
-
-const writeFile = async function(req, res) {
-    try {
-        let files = req.files
-        if (files && files.length > 0) {
-            //upload to s3 and get the uploaded link
-            // res.send the link back to frontend/postman
-            let uploadedFileURL = await uploadFile(files[0])
-            res.status(201).send({ status: true, msg: "file uploaded succesfully", data: uploadedFileURL })
-            return
-
-        } else {
-            res.status(400).send({ msg: "No file found" })
-            return
-        }
-    } catch (err) {
-        console.log(error);
-        res.status(500).send({ msg: error.message });
-    }
-};
-
-
-// -------------------------------------------------------------------------------------------- //
 // Create
 
 const createUser = async function(req, res){
     try {
         let data = req.body;
-        let { fName, lName, email, password, phone, profileImage, address } = data // Destructuring
+        // let Data = JSON.parse(data.abcd);
+        let files = req.files;
+
+        if (files && files.length > 0) {
+            //upload to s3 and get the uploaded link
+            // res.send the link back to frontend/postman
+            let uploadedFileURL = await awsdk.uploadFile(files[0])
+            data.profileImage = uploadedFileURL;
+        } else {
+            res.status(400).send({ msg: "profileImage is required" })
+        }
+        
+        let { fName, lName, email, password, phone, address } = data // Destructuring
         
         if (Object.keys(data).length == 0) {
+            res.status(400).send({ status: false, msg: "BAD REQUEST" })
+            return
+        }
+        if (Object.keys(files).length == 0) {
             res.status(400).send({ status: false, msg: "BAD REQUEST" })
             return
         }
@@ -150,14 +102,6 @@ const createUser = async function(req, res){
             res.status(400).send({ status: false, msg: "Phone Number Already Exist" })
             return
         }
-        if (!isValid(profileImage)){
-            res.status(400).send({ status: false, msg: "Profile Image is mandatory" })
-            return
-        }
-        if (!(/^(http[s]?:\/\/){0,1}(www\.){0,1}[a-zA-Z0-9\.\-]+\.[a-zA-Z]{2,5}[\.]{0,1}/.test(profileImage))){
-            res.status(400).send({ status: false, msg: "Invalid Image url"})
-            return
-        }
         if (!isValid(address)){
             res.status(400).send({ status: false, msg: "Address is mandatory" })
             return
@@ -204,14 +148,17 @@ const createUser = async function(req, res){
 const loginUser = async function (req, res) {
     try {
         let data = req.body
-        let { email, password, userId } = data  // Destructure
+
+        if (Object.keys(data).length == 0) {
+            res.status(400).send({ status: false, msg: "BAD REQUEST" })
+            return
+        }
+
+        let email = req.body.email;
+        let password = req.body.password;
 
         if (!isValid(email)) {
             res.status(400).send({ status: false, msg: "Email is required" })
-            return
-        }
-        if (!(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email))) {
-            res.status(400).send({ status: false, msg: "Email should have valid email address" })
             return
         }
         if (!isValid(password)) {
@@ -219,37 +166,32 @@ const loginUser = async function (req, res) {
             return
         }
 
-        // const salt = await bcrypt.genSalt(10);
-        // body.password = await bcrypt.hash(body.password, salt);
-
-        if (!isValid(userId)) {
-            res.status(400).send({ status: false, msg: "UserId is required" })
-            return
-        }
-        if (!isValidObjectId(userId)) {
-            res.status(400).send({ status: false, msg: "Invalid UserId" })
-            return
-        }
-
-        let userDetails = await userModel.findOne({ email: email, password: password })
+        let userDetails = await userModel.findOne({ email: email })
         if (!isValid(userDetails)) {
-            res.status(404).send({ status: false, msg: "Email & Password not matched" })
+            res.status(400).send({ status: false, msg: "User details is not correct" })
             return
         }
-        else {
-            let token = jwt.sign({
-                userId: userDetails._id,
-                iat: Math.floor(Date.now() / 1000),
-                // exp: Math.floor(Date.now() / 1000) + 10*60*60 
 
-            }, "Project-05-Group36-ShoppingCart", { expiresIn: "10h" })
-            res.setHeader("x-api-key", token);
-            res.status(201).send({ status: true, message: "User login successful", data: { userId, token } })
-        }
-    }
-    catch (error) {
-        console.log(error)
-        res.status(500).send({ msg: error.message })
+        bcrypt.compare(password, userDetails.password, function(err, result) {
+            if (result) {
+                let token = jwt.sign({
+                    userId: userDetails._id,
+                    iat: Math.floor(Date.now() / 1000),
+                    exp: Math.floor(Date.now() / 1000) + 10 * 60 * 60
+                }, "Project-05-Shopping-Cart-Group-36");
+
+                const userData = { userId: userDetails._id, token: token }
+                res.status(201).send({ status: true, msg: "User login successfully", data: userData })
+                return
+
+            } else {
+                res.status(401).send({ status: true, msg: "Plz provide correct password" })
+                return
+            }
+        })
+    } catch (error) {
+        res.status(500).send({ status: false, msg: error.message })
+        return
     }
 };
 
@@ -329,7 +271,6 @@ const updatedData = async function (req, res){
 
 
 module.exports.createUser = createUser;
-module.exports.writeFile = writeFile;
 module.exports.loginUser = loginUser;
 module.exports.getUserProfile = getUserProfile;
 module.exports.updatedData = updatedData;
