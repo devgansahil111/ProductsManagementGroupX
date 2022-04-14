@@ -22,6 +22,10 @@ const isValidObjectId = function (ObjectId) {
     return mongoose.Types.ObjectId.isValid(ObjectId)
 }
 
+const isValidAvailableSizes=function(availableSizes){
+    return ['Mr','Mrs','Miss'].indexOf(availableSizes) !==-1
+}
+
 
 // ----------------------------------------------------------------------------------------------- //
 // Create API
@@ -199,13 +203,6 @@ const updatedData = async function (req, res) {
             res.status(404).send({ status: false, msg: "Invalid ProductId" })
             return
         }
-
-        let productUpdatedData = await productModel.findOne({ _id: productId, isDeleted: false })
-
-        if (!isValid(productUpdatedData)) {
-            res.status(404).send({ status: false, msg: "No user data found with this Id" })
-            return
-        }
         if (!isValid(description)) {
             res.status(400).send({ status: false, msg: "There is no description" })
             return
@@ -234,8 +231,19 @@ const updatedData = async function (req, res) {
             res.status(400).send({ status: false, msg: "May i know correct size plz" })
             return
         }
+        if (!isValidAvailableSizes(availableSizes)) {
+            res.status(400).send({ status: false, msg: "Invalid size" })
+            return
+        }
         if (!isValid(installments)) {
             res.status(400).send({ status: false, msg: "It should be in number form" })
+            return
+        }
+        
+        let productUpdatedData = await productModel.findOne({ _id: productId, isDeleted: false })
+
+        if (!isValid(productUpdatedData)) {
+            res.status(404).send({ status: false, msg: "No user data found with this Id" })
             return
         }
          else {
