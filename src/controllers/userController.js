@@ -106,6 +106,14 @@ const createUser = async function(req, res){
             res.status(400).send({ status: false, msg: "Address is mandatory" })
             return
         }
+        if (isValid(address == undefined)){
+            res.status(400).send({ status: false, msg: "Address should not be undefined" })
+            return
+        }
+        if (!isValid(address.shipping)){
+            res.status(400).send({ status: false, msg: "Shipping Address is mandatory" })
+            return
+        }
         if (!isValid(address.shipping.street)){
             res.status(400).send({ status: false, msg: "Shipping Street is mandatory" })
             return
@@ -116,6 +124,14 @@ const createUser = async function(req, res){
         }
         if (!isValid(address.shipping.pincode)){
             res.status(400).send({ status: false, msg: "Shipping Pincode is mandatory" })
+            return
+        }
+        if (!/^[1-9]{1}[0-9]{5}$/.test(address.shipping.pincode)){
+            res.status(400).send({ status: false, msg: "Pincode is of 6 digits and does not start with 0" })
+            return
+        }
+        if (!isValid(address.billing)){
+            res.status(400).send({ status: false, msg: "Billing Address is mandatory" })
             return
         }
         if (!isValid(address.billing.street)){
@@ -129,7 +145,12 @@ const createUser = async function(req, res){
         if (!isValid(address.billing.pincode)){
             res.status(400).send({ status: false, msg: "Billing Pincode is mandatory" })
             return
-        }else {
+        }
+        if (!/^[1-9]{1}[0-9]{5}$/.test(address.billing.pincode)){
+            res.status(400).send({ status: false, msg: "Pincode is of 6 digits and does not start with 0" })
+            return
+        }
+        else {
             let createdUser = await userModel.create(data);
             res.status(201).send({ status: true, message: "User Created Successfully", msg: createdUser })
             return
@@ -234,6 +255,8 @@ const updatedData = async function (req, res){
         let data = req.body;
         let userId = req.params.userId;
 
+        let { fName, lName, phone, email, password, address } = data;
+
         if (!isValid(data.length == 0)){
             res.status(400).send({ status: false, msg: "Input via body is required"})
             return
@@ -246,16 +269,107 @@ const updatedData = async function (req, res){
             res.status(404).send({ status: false, msg: "Invalid UserId"})
             return
         }
+        if (!isValid(fName)){
+            res.status(400).send({ status: false, msg: "First name is required"})
+            return
+        }
+        if (!isValid(lName)){
+            res.status(400).send({ status: false, msg: "Last name is required"})
+            return
+        }
+        if (!isValid(phone)){
+            res.status(400).send({ status: false, msg: "Phone Number is mandatory" })
+            return
+        }
+        if (!(/^\d{10}$/.test(phone))) {
+            res.status(400).send({ status: false, msg: "Invalid Phone Number, it should be of 10 digits" })
+            return
+        }
 
-        let userUpdatedData = await userModel.findById({ _id: userId })
+        let isPhoneAlreadyUsed = await userModel.findOne({ phone })
+        if (isPhoneAlreadyUsed) {
+            res.status(400).send({ status: false, msg: "Phone Number Already Exist" })
+            return
+        }
+        if (!isValid(email)){
+            res.status(400).send({ status: false, msg: "Email is mandatory" })
+            return
+        }
+        if (!(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email))) {
+            res.status(400).send({ status: false, msg: "Email should be valid email address" })
+            return
+        }
+        
+        let isEmailAlreadyUsed = await userModel.findOne({ email })
+        if (isEmailAlreadyUsed) {
+            res.status(400).send({ status: false, msg: "Email Already Exist" })
+            return
+        }
+        if (!isValid(password)){
+            res.status(400).send({ status: false, msg: "Password is mandatory" })
+            return
+        }
+        if (!isValid(password > 8 || password < 15)){
+            res.status(400).send({ status: false, msg: "Password range should be between 8 to 15" })
+            return
+        }
+        if (!isValid(address)){
+            res.status(400).send({ status: false, msg: "Address is mandatory" })
+            return
+        }
+        if (isValid(address == undefined)){
+            res.status(400).send({ status: false, msg: "Address should not be undefined" })
+            return
+        }
+        if (!isValid(address.shipping)){
+            res.status(400).send({ status: false, msg: "Shipping Address is mandatory" })
+            return
+        }
+        if (!isValid(address.shipping.street)){
+            res.status(400).send({ status: false, msg: "Shipping street is mandatory" })
+            return
+        }
+        if (!isValid(address.shipping.city)){
+            res.status(400).send({ status: false, msg: "Shipping city is mandatory" })
+            return
+        }
+        if (!isValid(address.shipping.pincode)){
+            res.status(400).send({ status: false, msg: "Shipping Pincode is mandatory" })
+            return
+        }
+        if (!/^[1-9]{1}[0-9]{5}$/.test(address.shipping.pincode)){
+            res.status(400).send({ status: false, msg: "Pincode is of 6 digits and does not start with 0" })
+            return
+        }
+        if (!isValid(address.billing)){
+            res.status(400).send({ status: false, msg: "Billing Address is mandatory" })
+            return
+        }
+        if (!isValid(address.billing.street)){
+            res.status(400).send({ status: false, msg: "Billing street is mandatory" })
+            return
+        }
+        if (!isValid(address.billing.city)){
+            res.status(400).send({ status: false, msg: "Billing city is mandatory" })
+            return
+        }
+        if (!isValid(address.billing.pincode)){
+            res.status(400).send({ status: false, msg: "Billing pincode is mandatory" })
+            return
+        }
+        if (!/^[1-9]{1}[0-9]{5}$/.test(address.billing.pincode)){
+            res.status(400).send({ status: false, msg: "Pincode is of 6 digits and does not start with 0" })
+            return
+        }
+        let userUpdatedData = await userModel.findOne({ _id: userId, isDeleted: false  })
 
         if (!isValid(userUpdatedData)){
             res.status(400).send({ status: false, msg: "No user data found with this userId"})
             return
-
-        }else{
-            await userModel.findByIdAndUpdate({_id: userId}, data, { new: true })
-            let updateDetails = await userModel.find({_id: userId})
+        }
+        else{
+            let updateDetails = await userModel.findByIdAndUpdate({_id: userId}, data, { new: true })
+            // let updateDetails = await userModel.find({_id: userId})
             res.status(200).send({ status: true, msg: "Data updated Successfully", data: updateDetails })
             return
         }

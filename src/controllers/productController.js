@@ -29,7 +29,7 @@ const isValidObjectId = function (ObjectId) {
 const createProduct = async function (req, res) {
     try {
         let data = req.body;
-        let { title, description, price } = data // Destructuring
+        let { title, description, price, currencyId, currencyFormat } = data // Destructuring
         let files = req.files
         if (files && files.length > 0) {
             //upload to s3 and get the uploaded link
@@ -64,8 +64,16 @@ const createProduct = async function (req, res) {
             res.status(400).send({ status: false, msg: "Price is mandatory" })
             return
         }
-        if (!(/(\-?\d+\.?\d{0,2})/.test(price))) {
+        if (!(/^\d{0,8}(\.\d{1,2})?$/.test(price))) {
             res.status(400).send({ status: false, msg: "Invalid Price Number" })
+            return
+        }
+        if (!isValid(currencyId)) {
+            res.status(400).send({ status: false, msg: "Enter valid CurrencyId" })
+            return
+        }
+        if (!isValid(currencyFormat)) {
+            res.status(400).send({ status: false, msg: "CurrencyFormat is mandatory" })
             return
         }
         else {
@@ -177,6 +185,8 @@ const updatedData = async function (req, res) {
         let data = req.body;
         let productId = req.params.productId;
 
+        let {description, title, isFreeShipping, price, style, availableSizes, installments } = data
+
         if (!isValid(data.length == 0)) {
             res.status(400).send({ status: false, msg: "Input via body is required" })
             return
@@ -190,15 +200,47 @@ const updatedData = async function (req, res) {
             return
         }
 
-        let productUpdatedData = await productModel.findById({ _id: productId, isDeleted: false })
+        let productUpdatedData = await productModel.findOne({ _id: productId, isDeleted: false })
 
         if (!isValid(productUpdatedData)) {
             res.status(404).send({ status: false, msg: "No user data found with this Id" })
             return
-
-        } else {
-            await productModel.findByIdAndUpdate({ _id: productId, isDeleted: false }, data, { new: true })
-            let updateDetails = await productModel.find({ _id: productId })
+        }
+        if (!isValid(description)) {
+            res.status(400).send({ status: false, msg: "There is no description" })
+            return
+        }
+        if (!isValid(title)) {
+            res.status(400).send({ status: false, msg: "Please give title" })
+            return
+        }
+        if (!isValid(isFreeShipping)) {
+            res.status(400).send({ status: false, msg: "Only give true or false" })
+            return
+        }
+        if (!isValid(price)) {
+            res.status(400).send({ status: false, msg: "Give me money" })
+            return
+        }
+        if (!(/^\d{0,8}(\.\d{1,2})?$/.test(price))) {
+            res.status(400).send({ status: false, msg: "Invalid Price Number" })
+            return
+        }
+        if (!isValid(style)) {
+            res.status(400).send({ status: false, msg: "Please give style" })
+            return
+        }
+        if (!isValid(availableSizes)) {
+            res.status(400).send({ status: false, msg: "May i know correct size plz" })
+            return
+        }
+        if (!isValid(installments)) {
+            res.status(400).send({ status: false, msg: "It should be in number form" })
+            return
+        }
+         else {
+            let updateDetails = await productModel.findByIdAndUpdate({ _id: productId, isDeleted: false }, data, { new: true })
+            // let updateDetails = await productModel.find({ _id: productId })
             res.status(200).send({ status: true, msg: "Data updated Successfully", data: updateDetails })
             return
         }
