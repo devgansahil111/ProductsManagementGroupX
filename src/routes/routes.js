@@ -8,6 +8,7 @@ const userController = require("../controllers/userController");
 const awsdk = require("../aws-sdk/aws");
 const aws = require("aws-sdk");
 const productController = require("../controllers/productController");
+const cartController = require("../controllers/cartController");
 
 
 
@@ -30,6 +31,10 @@ router.put("/products/:productId", productController.updatedData);
 router.delete("/products/:productId", productController.deletedProduct);
 
 
+// ------------------------------------------------------------------------------------- //
+// Cart API's
+
+router.post("/users/:userId/cart", cartController.createCart);
 
 // ------------------------------------------------------------------------------------- //
 // Exports
