@@ -58,7 +58,8 @@ const productSchema = new mongoose.Schema({
     },
     installements: {
         type: Number,
-        trim: true
+        trim: true,
+        required: true
     },
     deletedAt:{
         type: Date,

@@ -23,7 +23,7 @@ const isValidObjectId = function (ObjectId) {
 }
 
 const isValidAvailableSizes=function(availableSizes){
-    return ['Mr','Mrs','Miss'].indexOf(availableSizes) !==-1
+    return ["S", "XS","M","X", "L","XXL", "XL"].indexOf(availableSizes) !==-1
 }
 
 
@@ -33,7 +33,7 @@ const isValidAvailableSizes=function(availableSizes){
 const createProduct = async function (req, res) {
     try {
         let data = req.body;
-        let { title, description, price, currencyId, currencyFormat } = data // Destructuring
+        let { title, description, price, currencyId, currencyFormat, installements } = data // Destructuring
         let files = req.files
         if (files && files.length > 0) {
             //upload to s3 and get the uploaded link
@@ -78,6 +78,10 @@ const createProduct = async function (req, res) {
         }
         if (!isValid(currencyFormat)) {
             res.status(400).send({ status: false, msg: "CurrencyFormat is mandatory" })
+            return
+        }
+        if (!isValid(installements)) {
+            res.status(400).send({ status: false, msg: "Installement is mandatory" })
             return
         }
         else {
@@ -239,7 +243,7 @@ const updatedData = async function (req, res) {
             res.status(400).send({ status: false, msg: "It should be in number form" })
             return
         }
-        
+
         let productUpdatedData = await productModel.findOne({ _id: productId, isDeleted: false })
 
         if (!isValid(productUpdatedData)) {

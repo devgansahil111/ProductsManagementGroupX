@@ -9,6 +9,8 @@ const awsdk = require("../aws-sdk/aws");
 const aws = require("aws-sdk");
 const productController = require("../controllers/productController");
 const cartController = require("../controllers/cartController");
+const middleware = require("../middleware/auth");
+const orderController = require("../controllers/orderController");
 
 
 
@@ -17,8 +19,8 @@ const cartController = require("../controllers/cartController");
 
 router.post("/register", userController.createUser);
 router.post("/login", userController.loginUser);
-router.get("/user/:userId/profile", userController.getUserProfile);
-router.put("/user/:userId/profile", userController.updatedData);
+router.get("/user/:userId/profile", middleware.authentication, userController.getUserProfile);
+router.put("/user/:userId/profile", middleware.authentication,userController.updatedData);
 
 
 // -------------------------------------------------------------------------------------- //
@@ -35,9 +37,19 @@ router.delete("/products/:productId", productController.deletedProduct);
 // Cart API's
 
 router.post("/users/:userId/cart", cartController.createCart);
+router.put("/users/:userId/cart", cartController.updateCart);
+router.get("/users/:userId/cart", cartController.getCart);
+router.delete("/users/:userId/cart", cartController.deleteCart);
+
+
+// ------------------------------------------------------------------------------------- //
+// Order API'S
+
+router.post("/users/:userId/orders", middleware.authentication, orderController.createOrder);
+router.put("/users/:userId/orders", middleware.authentication, orderController.updateOrder);
+
 
 // ------------------------------------------------------------------------------------- //
 // Exports
-
 
 module.exports = router;
