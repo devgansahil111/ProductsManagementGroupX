@@ -56,6 +56,11 @@ const createOrder = async(req, res) => {
             res.status(400).send({ status: false, msg: `user doesn't exists for ${userId}`});
             return
         }
+        if (searchUser._id.toString() != req.userId) {
+            res.status(401).send({ status: false, message: `Unauthorized access! User's info doesn't match` });
+            return
+        }
+
         if (!isValid(cartId)) {
             res.status(400).send({ status: false, msg: `Cart doesn't exists for ${userId}`});
             return

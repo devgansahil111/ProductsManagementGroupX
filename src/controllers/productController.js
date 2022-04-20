@@ -130,7 +130,7 @@ const getProducts = async function (req, res) {
             }
 
             const filteredProductsByPrice = await productModel.find({ $and: finalFilter }).sort({ price: priceSort })
-            if (!isValid(filteredProductsByPrice) && filteredProductsByPrice.length === 0) {
+            if (isValid(filteredProductsByPrice) && filteredProductsByPrice.length === 0) {
                 res.status(404).send({ status: false, msg: "Data not found" })
                 return
             }
