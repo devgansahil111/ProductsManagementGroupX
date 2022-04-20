@@ -76,7 +76,7 @@ const createCart = async (req, res) => {
                 return
             }
             if (req.userId !== isCartPresentForUser.userId.toString()) {
-                res.status(401).send({ status: false, message: "You are not authorized to create and update the cart" })
+                res.status(403).send({ status: false, message: "You are not authorized to create and update the cart" })
                 return
             }
             if (cartId !== cartIdForUser._id.toString()) {
@@ -150,7 +150,7 @@ const updateCart = async function (req, res) {
             return
         }
         if (updatedCart._id.toString() != req.userId) {
-            res.status(401).send({ status: false, message: `Unauthorized access! User's info doesn't match` });
+            res.status(403).send({ status: false, message: `Unauthorized access! User's info doesn't match` });
             return
         }
         let updatedDetails = await cartModel.findOne({ userId: userId })
@@ -239,7 +239,7 @@ const getCart = async function (req, res) {
         else {
             const cartdata = await cartModel.findOne({ userId: userId })
             if (req.userId != oneUser._id) {
-                res.status(401).send({ status: false, message: "Unauthorized access! You are not authorized to Get this cart details" });
+                res.status(403).send({ status: false, message: "Unauthorized access! You are not authorized to Get this cart details" });
                 return
             }
             res.status(200).send({ status: true, msg: "success", data: cartdata })
